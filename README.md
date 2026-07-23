@@ -93,6 +93,17 @@ To regenerate the correct manifest without running interactive setup:
 hermes --profile support-agent slack-profile-manifest --write
 ```
 
+To use Slack's newer Agent messaging experience while retaining the
+profile-specific identity and single root command:
+
+```bash
+hermes --profile support-agent slack-profile-manifest --agent-view --write
+```
+
+`--agent-view` changes the Slack messaging surface; Slack describes that
+choice as irreversible after applying the manifest. Generating the JSON alone
+does not change the Slack app.
+
 You can override its display metadata:
 
 ```bash

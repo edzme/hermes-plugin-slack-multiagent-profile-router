@@ -2,7 +2,7 @@ manifest_version: 1
 name: slack-platform
 label: Slack Multi-Agent Profile Router
 kind: platform
-version: 0.2.0
+version: 0.3.0
 description: >
   Profile-scoped wrapper around Hermes' bundled Slack adapter. It gives each
   profile one unique root slash command and generates a matching Slack app

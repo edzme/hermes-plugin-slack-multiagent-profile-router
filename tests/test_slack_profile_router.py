@@ -53,6 +53,24 @@ def test_invalid_command_name_is_rejected():
         plugin._normalize_command_name("Not A Slack Command")
 
 
+def test_agent_view_manifest_keeps_profile_identity_and_one_command():
+    manifest = plugin._build_profile_manifest(
+        profile_name="support-agent",
+        bot_name="support-agent",
+        description="Customer support agent for Slack",
+        command_name="support-agent",
+        messaging_experience="agent",
+    )
+
+    assert "assistant_view" not in manifest["features"]
+    assert manifest["features"]["agent_view"]["agent_description"] == (
+        "Chat with support-agent in Slack Messages."
+    )
+    assert [row["command"] for row in manifest["features"]["slash_commands"]] == [
+        "/support-agent"
+    ]
+
+
 def test_platform_hint_uses_profile_facing_identity():
     hint = plugin._profile_platform_hint("support-agent")
     assert '"support-agent"' in hint

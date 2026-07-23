@@ -154,6 +154,11 @@ def _namespace_manifest(
         assistant_view["assistant_description"] = (
             f"Chat with {bot_name} in threads and DMs."[:140]
         )
+    agent_view = features.get("agent_view")
+    if isinstance(agent_view, dict):
+        agent_view["agent_description"] = (
+            f"Chat with {bot_name} in Slack Messages."[:140]
+        )
     features["slash_commands"] = [
         {
             "command": f"/{command_name}",
@@ -172,7 +177,7 @@ def _build_profile_manifest(
     bot_name: str,
     description: str,
     command_name: str,
-    include_assistant: bool = True,
+    messaging_experience: str = "assistant",
 ) -> dict[str, Any]:
     """Build from the installed Hermes generator, then namespace commands."""
     from hermes_cli.slack_cli import _build_full_manifest
@@ -180,7 +185,7 @@ def _build_profile_manifest(
     manifest = _build_full_manifest(
         bot_name=bot_name,
         bot_description=description,
-        include_assistant=include_assistant,
+        messaging_experience=messaging_experience,
     )
     return _namespace_manifest(
         manifest,
@@ -210,12 +215,17 @@ def _profile_interactive_setup(profile_name: str) -> Callable[[], None]:
             bot_name: str,
             bot_description: str,
             include_assistant: bool = True,
+            messaging_experience: str | None = None,
         ) -> dict[str, Any]:
             del bot_name, bot_description
+            if messaging_experience is None:
+                messaging_experience = (
+                    "assistant" if include_assistant else "none"
+                )
             manifest = original_builder(
                 bot_name=_profile_bot_name(profile_name),
                 bot_description=_profile_bot_description(profile_name),
-                include_assistant=include_assistant,
+                messaging_experience=messaging_experience,
             )
             return _namespace_manifest(
                 manifest,
@@ -266,10 +276,20 @@ def _setup_manifest_parser(parser: argparse.ArgumentParser) -> None:
         default=None,
         help="Unique root command; defaults to SLACK_COMMAND_NAME/profile name.",
     )
-    parser.add_argument(
+    messaging = parser.add_mutually_exclusive_group()
+    messaging.add_argument(
         "--no-assistant",
         action="store_true",
         help="Omit Slack AI Assistant mode from the generated manifest.",
+    )
+    messaging.add_argument(
+        "--agent-view",
+        action="store_true",
+        help=(
+            "Emit Slack's Agent messaging experience instead of the legacy "
+            "Assistant view. Slack documents this choice as irreversible "
+            "after the manifest is applied."
+        ),
     )
 
 
@@ -282,12 +302,18 @@ def _manifest_command(args: argparse.Namespace) -> int:
     description = (
         args.description or _profile_bot_description(profile_name)
     ).strip()
+    if args.agent_view:
+        messaging_experience = "agent"
+    elif args.no_assistant:
+        messaging_experience = "none"
+    else:
+        messaging_experience = "assistant"
     manifest = _build_profile_manifest(
         profile_name=profile_name,
         bot_name=bot_name,
         description=description,
         command_name=command_name,
-        include_assistant=not args.no_assistant,
+        messaging_experience=messaging_experience,
     )
     payload = json.dumps(manifest, indent=2, ensure_ascii=False) + "\n"
 
