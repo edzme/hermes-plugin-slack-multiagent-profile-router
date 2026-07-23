@@ -104,6 +104,44 @@ hermes --profile support-agent slack-profile-manifest --agent-view --write
 choice as irreversible after applying the manifest. Generating the JSON alone
 does not change the Slack app.
 
+### Important: use the plugin manifest command
+
+This stock Hermes command is **not** profile-aware:
+
+```bash
+# Wrong for a multi-profile Slack app
+hermes --profile support-agent slack manifest --agent-view --write
+```
+
+It accepts `--profile`, but the profile only determines where the file is
+written. The stock generator still registers Hermes' complete native slash
+command set (`/hermes`, `/model`, `/help`, and so on). `--agent-view` selects
+Slack's newer messaging experience; it does not select profile routing or
+command namespacing.
+
+Use the plugin command instead:
+
+```bash
+# Correct: Agent View plus one profile-specific root command
+hermes --profile support-agent \
+  slack-profile-manifest --agent-view --write
+```
+
+Before applying the manifest in Slack, verify that it contains only the
+profile command:
+
+```bash
+jq -r '.features.slash_commands[].command' \
+  ~/.hermes/profiles/support-agent/slack-manifest.json
+# /support-agent
+```
+
+If a stock manifest was generated accidentally, rerun the correct plugin
+command and replace the manifest in Slack. If Agent View has already been
+applied, the slash commands and display identity can still be corrected with
+the new manifest, even though Slack does not allow reverting the app to the
+legacy Assistant View.
+
 You can override its display metadata:
 
 ```bash
@@ -111,10 +149,6 @@ hermes --profile support-agent slack-profile-manifest --write \
   --name support-agent \
   --description "Customer support agent for Slack"
 ```
-
-Do not use stock `hermes slack manifest` for a multi-profile Slack app. That
-stock command intentionally emits Hermes' generic command set. The
-profile-aware command above emits the single unique root command.
 
 After configuring or updating the app, restart its gateway:
 
