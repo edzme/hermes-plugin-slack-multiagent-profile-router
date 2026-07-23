@@ -53,6 +53,12 @@ def test_invalid_command_name_is_rejected():
         plugin._normalize_command_name("Not A Slack Command")
 
 
+def test_platform_hint_uses_profile_facing_identity():
+    hint = plugin._profile_platform_hint("support-agent")
+    assert '"support-agent"' in hint
+    assert 'not "Hermes"' in hint
+
+
 @pytest.mark.asyncio
 async def test_profile_command_reuses_hermes_catch_all(monkeypatch):
     seen = {}
@@ -110,6 +116,29 @@ def test_profile_handler_is_registered_before_socket_start(monkeypatch):
     bundled_start.assert_called_once()
 
 
+@pytest.mark.asyncio
+async def test_handoff_uses_profile_facing_identity(monkeypatch):
+    sent = {}
+
+    class FakeClient:
+        async def chat_postMessage(self, **kwargs):
+            sent.update(kwargs)
+            return {"ts": "123.456"}
+
+    adapter = plugin.ProfileSlackAdapter(
+        PlatformConfig(enabled=True, token="xoxb-test"),
+        profile_name="support-agent",
+    )
+    adapter._app = object()
+    monkeypatch.setattr(adapter, "_get_client", lambda _chat_id: FakeClient())
+
+    thread_id = await adapter.create_handoff_thread("C1", "Escalation")
+
+    assert thread_id == "123.456"
+    assert sent["channel"] == "C1"
+    assert sent["text"].startswith(":thread: support-agent handoff")
+
+
 def test_interactive_setup_generates_profile_manifest_and_restores(monkeypatch):
     original_builder = slack_cli._build_full_manifest
     original_print_info = cli_output.print_info
@@ -123,6 +152,7 @@ def test_interactive_setup_generates_profile_manifest_and_restores(monkeypatch):
         cli_output.print_info(
             "Re-run `hermes slack manifest --write` anytime to refresh"
         )
+        cli_output.print_info("Hermes adds new commands.")
 
     monkeypatch.setattr(bundled_slack, "interactive_setup", fake_setup)
     printed = []
@@ -141,5 +171,6 @@ def test_interactive_setup_generates_profile_manifest_and_restores(monkeypatch):
         "/support-agent"
     ]
     assert "slack-profile-manifest" in printed[0]
+    assert printed[1] == "support-agent adds new commands."
     assert slack_cli._build_full_manifest is original_builder
     assert cli_output.print_info is not original_print_info

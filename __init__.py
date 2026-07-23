@@ -50,7 +50,18 @@ def _profile_bot_name(profile_name: str) -> str:
 def _profile_bot_description(profile_name: str) -> str:
     return (
         os.getenv("SLACK_BOT_DESCRIPTION", "").strip()
-        or f"Hermes agent for the {profile_name} profile"
+        or f"{_profile_bot_name(profile_name)} agent for Slack"
+    )
+
+
+def _profile_platform_hint(profile_name: str) -> str:
+    """Give the Slack-facing agent the same identity as its profile bot."""
+    bot_name = _profile_bot_name(profile_name)
+    return (
+        f'Your public-facing agent identity in Slack is "{bot_name}". '
+        f'Refer to yourself as "{bot_name}", not "Hermes". '
+        "Hermes Agent is the underlying software runtime; mention that name "
+        "only when discussing the software itself."
     )
 
 
@@ -60,6 +71,7 @@ class ProfileSlackAdapter(bundled_slack.SlackAdapter):
     def __init__(self, config: Any, profile_name: str):
         super().__init__(config)
         self._profile_command_name = _profile_command_name(profile_name)
+        self._profile_bot_name = _profile_bot_name(profile_name)
 
     def _start_socket_mode_handler(self) -> None:
         """Register the profile command before the bundled socket starts."""
@@ -83,6 +95,44 @@ class ProfileSlackAdapter(bundled_slack.SlackAdapter):
             command = dict(command)
             command["command"] = "/hermes"
         await super()._handle_slash_command(command)
+
+    async def create_handoff_thread(
+        self,
+        parent_chat_id: str,
+        name: str,
+    ) -> str | None:
+        """Create a handoff anchor using the profile-facing agent name."""
+        if not self._app:
+            return None
+        try:
+            client = self._get_client(parent_chat_id)
+            if client is None:
+                return None
+            seed_text = (
+                f":thread: {self._profile_bot_name} handoff — "
+                f"*{(name or 'session').strip()[:80]}*"
+            )
+            result = await client.chat_postMessage(
+                channel=parent_chat_id,
+                text=seed_text,
+            )
+            ts = (
+                result.get("ts")
+                if isinstance(result, dict)
+                else getattr(result, "get", lambda _key, _default=None: None)(
+                    "ts"
+                )
+            )
+            if ts:
+                return str(ts)
+        except Exception as exc:
+            bundled_slack.logger.warning(
+                "[%s] Handoff thread: seed-post failed for channel %s: %s",
+                self.name,
+                parent_chat_id,
+                exc,
+            )
+        return None
 
 
 def _namespace_manifest(
@@ -179,6 +229,10 @@ def _profile_interactive_setup(profile_name: str) -> Callable[[], None]:
                     _STOCK_MANIFEST_COMMAND,
                     _PROFILE_MANIFEST_COMMAND,
                 )
+                message = message.replace(
+                    "Hermes",
+                    _profile_bot_name(profile_name),
+                )
             return original_print_info(message, *args, **kwargs)
 
         slack_cli._build_full_manifest = profile_builder
@@ -268,6 +322,7 @@ def register(ctx) -> None:
                 profile_name=profile_name,
             ),
             setup_fn=_profile_interactive_setup(profile_name),
+            platform_hint=_profile_platform_hint(profile_name),
             plugin_name=ctx.manifest.name,
             source="plugin",
         )
