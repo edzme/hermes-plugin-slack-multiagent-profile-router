@@ -2,7 +2,7 @@ manifest_version: 1
 name: slack-platform
 label: Slack Multi-Agent Profile Router
 kind: platform
-version: 0.3.0
+version: 0.3.1
 description: >
   Profile-scoped wrapper around Hermes' bundled Slack adapter. It gives each
   profile one unique root slash command and generates a matching Slack app
@@ -37,6 +37,10 @@ optional_env:
   - name: SLACK_ALLOWED_USERS
     description: "Comma-separated Slack member IDs allowed to talk to the bot"
     prompt: "Allowed users (comma-separated)"
+    password: false
+  - name: SLACK_ALLOW_ALL_USERS
+    description: "Allow every Slack workspace member to use the bot"
+    prompt: "Allow all Slack users? (true/false)"
     password: false
   - name: SLACK_HOME_CHANNEL
     description: "Default channel ID for cron and notification delivery"

@@ -65,6 +65,17 @@ SLACK_BOT_DESCRIPTION=Customer support agent for Slack
 `SLACK_COMMAND_NAME` must be 1-32 lowercase letters, digits, hyphens, or
 underscores and must begin with a letter or digit.
 
+By default, unknown or unpaired Slack users are denied. To intentionally allow
+every member of the connected Slack workspace to use a profile bot, set this
+in that profile's `.env`:
+
+```dotenv
+SLACK_ALLOW_ALL_USERS=true
+```
+
+Prefer this Slack-scoped setting over `GATEWAY_ALLOW_ALL_USERS=true`, which
+opens authorization across every configured messaging platform.
+
 ## Set up Slack
 
 Run Hermes' normal interactive gateway setup:
