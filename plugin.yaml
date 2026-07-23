@@ -1,0 +1,44 @@
+manifest_version: 1
+name: slack-platform
+label: Slack Multi-Agent Profile Router
+kind: platform
+version: 0.1.0
+description: >
+  Profile-scoped wrapper around Hermes' bundled Slack adapter. It gives each
+  profile one unique root slash command and generates a matching Slack app
+  manifest without modifying Hermes core.
+author: edzme
+requires_env:
+  - name: SLACK_BOT_TOKEN
+    description: "Slack bot token (xoxb-...)"
+    prompt: "Slack Bot Token (xoxb-...)"
+    url: "https://api.slack.com/apps"
+    secret: true
+    password: true
+  - name: SLACK_APP_TOKEN
+    description: "Slack app-level token for Socket Mode (xapp-...)"
+    prompt: "Slack App Token (xapp-...)"
+    url: "https://api.slack.com/apps"
+    secret: true
+    password: true
+optional_env:
+  - name: SLACK_COMMAND_NAME
+    description: "Unique root slash command; defaults to the Hermes profile name"
+    prompt: "Slack root command"
+    password: false
+  - name: SLACK_BOT_NAME
+    description: "Slack app and bot display name; defaults to the profile name"
+    prompt: "Slack app and bot name"
+    password: false
+  - name: SLACK_BOT_DESCRIPTION
+    description: "Slack app description; defaults to a profile-specific description"
+    prompt: "Slack app description"
+    password: false
+  - name: SLACK_ALLOWED_USERS
+    description: "Comma-separated Slack member IDs allowed to talk to the bot"
+    prompt: "Allowed users (comma-separated)"
+    password: false
+  - name: SLACK_HOME_CHANNEL
+    description: "Default channel ID for cron and notification delivery"
+    prompt: "Home channel ID"
+    password: false
